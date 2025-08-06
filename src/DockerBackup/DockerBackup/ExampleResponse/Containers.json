@@ -1,0 +1,85 @@
+[
+  {
+    "Id": "e53074a3a69ce8ba46c178eda3f13cc8362b2ec2e53d3b8051b2103e852e424a",
+    "Names": [
+      "/postgres-test"
+    ],
+    "Image": "postgres:16-alpine",
+    "ImageID": "sha256:dca9c7aa70c71caf8bcc48c8ec40658c1fdf2d1e4e8d26bc27d4d18e030d779a",
+    "Command": "docker-entrypoint.sh postgres",
+    "Created": 1754508670,
+    "Ports": [
+      {
+        "IP": "0.0.0.0",
+        "PrivatePort": 5432,
+        "PublicPort": 5432,
+        "Type": "tcp"
+      },
+      {
+        "IP": "::",
+        "PrivatePort": 5432,
+        "PublicPort": 5432,
+        "Type": "tcp"
+      }
+    ],
+    "Labels": {
+      "com.docker.compose.config-hash": "59d362fa11a570bef4fa8470ae0dd662db589efbdd966d8affb6a3dd33ca924b",
+      "com.docker.compose.container-number": "1",
+      "com.docker.compose.depends_on": "",
+      "com.docker.compose.image": "sha256:dca9c7aa70c71caf8bcc48c8ec40658c1fdf2d1e4e8d26bc27d4d18e030d779a",
+      "com.docker.compose.oneoff": "False",
+      "com.docker.compose.project": "dockersocket",
+      "com.docker.compose.project.config_files": "/home/stig/RiderProjects/DockerSocket/compose.yml",
+      "com.docker.compose.project.working_dir": "/home/stig/RiderProjects/DockerSocket",
+      "com.docker.compose.service": "db",
+      "com.docker.compose.version": "2.39.1",
+      "postgres.backup.enabled": "true"
+    },
+    "State": "running",
+    "Status": "Up 14 minutes (healthy)",
+    "HostConfig": {
+      "NetworkMode": "dockersocket_default"
+    },
+    "NetworkSettings": {
+      "Networks": {
+        "dockersocket_default": {
+          "IPAMConfig": null,
+          "Links": null,
+          "Aliases": null,
+          "MacAddress": "22:50:8f:d4:87:66",
+          "DriverOpts": null,
+          "GwPriority": 0,
+          "NetworkID": "d04b3e4a32f994f981036e7d31ab59d2cd2071665b33cc62e544b30ee5c32f70",
+          "EndpointID": "d5889019e0401c0268536620f87f33bc134bd5e002a90bd017e53081e70f8422",
+          "Gateway": "172.30.0.1",
+          "IPAddress": "172.30.0.2",
+          "IPPrefixLen": 16,
+          "IPv6Gateway": "",
+          "GlobalIPv6Address": "",
+          "GlobalIPv6PrefixLen": 0,
+          "DNSNames": null
+        }
+      }
+    },
+    "Mounts": [
+      {
+        "Type": "bind",
+        "Source": "/home/stig/RiderProjects/DockerSocket/backup",
+        "Destination": "/var/backups",
+        "Mode": "rw",
+        "RW": true,
+        "Propagation": "rprivate"
+      },
+      {
+        "Type": "volume",
+        "Name": "dockersocket_postgres_data",
+        "Source": "/var/lib/docker/volumes/dockersocket_postgres_data/_data",
+        "Destination": "/var/lib/postgresql/data",
+        "Driver": "local",
+        "Mode": "rw",
+        "RW": true,
+        "Propagation": ""
+      }
+    ]
+  }
+]
