@@ -25,7 +25,10 @@ public class BackupService : CronScheduledBackgroundService
         await foreach (DockerContainer container in dockerClient.GetContainersAsync(cancellationToken)
                            .WithCancellation(cancellationToken))
         {
-            if (container.GetValueAsBool("dk.vsnt.backup.postgres.enabled") is not true || container.IsRunning is not true)
+            if (
+                container.Image.StartsWith("postgres", StringComparison.OrdinalIgnoreCase) is not true ||
+                container.GetValueAsBool("dk.vsnt.backup.postgres.enabled") is not true || 
+                container.IsRunning is not true)
             {
                 continue;
             }
