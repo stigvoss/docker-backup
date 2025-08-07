@@ -22,17 +22,14 @@ public class BackupService : CronScheduledBackgroundService
 
     public override async Task ScheduledExecutionAsync(CancellationToken cancellationToken)
     {
-        await foreach (DockerContainer container in dockerClient.GetContainersAsync(cancellationToken)
-                           .WithCancellation(cancellationToken))
+        IEnumerable<DockerContainer> containers = dockerClient.GetContainersAsync(cancellationToken)
+            .ToBlockingEnumerable(cancellationToken)
+            .Where(container => container.IsRunning ?? false)
+            .Where(container => container.Image.StartsWith("postgres", StringComparison.OrdinalIgnoreCase))
+            .Where(container => container.GetValueAsBool("dk.vsnt.backup.postgres.enabled") ?? false);
+        
+        foreach (DockerContainer container in containers)
         {
-            if (
-                container.Image.StartsWith("postgres", StringComparison.OrdinalIgnoreCase) is not true ||
-                container.GetValueAsBool("dk.vsnt.backup.postgres.enabled") is not true || 
-                container.IsRunning is not true)
-            {
-                continue;
-            }
-                
             try
             {
                 string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
