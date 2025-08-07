@@ -32,12 +32,14 @@ public class DockerClient : IDisposable
     /// Asynchronously retrieves a list of Docker containers.
     /// </summary>
     /// <returns> An asynchronous enumerable collection of <see cref="DockerContainer"/> objects.</returns>
-    public async IAsyncEnumerable<DockerContainer> GetContainersAsync()
+    public async IAsyncEnumerable<DockerContainer> GetContainersAsync(CancellationToken? cancellationToken)
     {
-        HttpResponseMessage response = await this.httpClient.GetAsync("/containers/json");
+        HttpResponseMessage response = await this.httpClient.GetAsync(
+            "/containers/json", 
+            cancellationToken ?? CancellationToken.None);
         response.EnsureSuccessStatusCode();
         
-        await foreach (DockerContainer? container in response.Content.ReadFromJsonAsAsyncEnumerable<DockerContainer>())
+        await foreach (DockerContainer? container in response.Content.ReadFromJsonAsAsyncEnumerable<DockerContainer>(cancellationToken ?? CancellationToken.None))
         {
             if (container is not null)
             {
@@ -45,18 +47,22 @@ public class DockerClient : IDisposable
             }
         }
     }
-    
+
     /// <summary>
     /// Asynchronously retrieves a specific Docker container by its ID.
     /// </summary>
     /// <param name="containerId">The ID of the Docker container to retrieve.</param>
+    /// <param name="cancellationToken"></param>
     /// <returns>A single <see cref="DockerContainer"/> object if found, otherwise null.</returns>
-    public async Task<DockerContainer?> GetContainerAsync(string containerId)
+    public async Task<DockerContainer?> GetContainerAsync(string containerId, CancellationToken? cancellationToken = null)
     {
-        HttpResponseMessage response = await this.httpClient.GetAsync($"/containers/{containerId}/json");
+        HttpResponseMessage response = await this.httpClient.GetAsync(
+            $"/containers/{containerId}/json", 
+            cancellationToken ?? CancellationToken.None);
         response.EnsureSuccessStatusCode();
         
-        return await response.Content.ReadFromJsonAsync<DockerContainer>();
+        return await response.Content.ReadFromJsonAsync<DockerContainer>(
+            cancellationToken ?? CancellationToken.None);
 
     }
 
@@ -65,41 +71,48 @@ public class DockerClient : IDisposable
     /// </summary>
     /// <param name="container">The Docker container in which to execute the command.</param>
     /// <param name="command">The command to execute in the container.</param>
+    /// <param name="cancellationToken"></param>
     /// <returns>The output of the command execution as a string, or null if the command fails.</returns>
     /// <exception cref="InvalidOperationException">Failed to start the command execution.</exception>
-    public async Task<string?> ExecuteCommandAsync(DockerContainer container, string command)
+    public async Task<string?> ExecuteCommandAsync(DockerContainer container, string command, CancellationToken? cancellationToken = null)
     {
-        CreateExecInstanceResponse? createInstanceResponse = await CreateExecInstance(container, command);
+        CreateExecInstanceResponse? createInstanceResponse = await CreateExecInstanceAsync(container, command, cancellationToken);
 
         if (string.IsNullOrWhiteSpace(createInstanceResponse?.Id))
         {
             throw new InvalidOperationException("Failed to create exec instance.");
         }
         
-        return await StartExecInstance(createInstanceResponse.Id);
+        return await StartExecInstanceAsync(createInstanceResponse.Id, cancellationToken);
     }
 
     /// <summary>
     /// Starts an exec instance in a Docker container.
     /// </summary>
     /// <param name="execInstanceId">The ID of the exec instance to start.</param>
+    /// <param name="cancellationToken"></param>
     /// <returns>The output of the exec instance as a string, or null if the start fails.</returns>
     /// <exception cref="InvalidOperationException">Failed to start the exec instance.</exception>
-    private async Task<string?> StartExecInstance(string execInstanceId)
+    private async Task<string?> StartExecInstanceAsync(string execInstanceId, CancellationToken? cancellationToken)
     {
-        HttpResponseMessage response = await this.httpClient.PostAsJsonAsync($"/exec/{execInstanceId}/start", new
-        {
-            Detach = false,
-            Tty = false
-        });
+        HttpResponseMessage response = await this.httpClient.PostAsJsonAsync(
+            $"/exec/{execInstanceId}/start", 
+            new
+            {
+                Detach = false,
+                Tty = false
+            }, 
+            cancellationToken ?? CancellationToken.None);
         
         if (!response.IsSuccessStatusCode)
         {
-            ErrorResponse? errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            ErrorResponse? errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>(
+                cancellationToken ?? CancellationToken.None);
             throw new InvalidOperationException($"Failed to start exec instance: {errorResponse}");
         }
 
-        return await response.Content.ReadAsStringAsync();
+        return await response.Content.ReadAsStringAsync(
+            cancellationToken ?? CancellationToken.None);
     }
 
     /// <summary>
@@ -107,17 +120,22 @@ public class DockerClient : IDisposable
     /// </summary>
     /// <param name="container">The Docker container in which to create the exec instance.</param>
     /// <param name="command">The command to execute in the container.</param>
+    /// <param name="cancellationToken"></param>
     /// <returns>A <see cref="CreateExecInstanceResponse"/> containing the ID of the created exec instance, or null if creation fails.</returns>
-    private async Task<CreateExecInstanceResponse?> CreateExecInstance(DockerContainer container, string command)
+    private async Task<CreateExecInstanceResponse?> CreateExecInstanceAsync(DockerContainer container, string command,
+        CancellationToken? cancellationToken)
     {
-        HttpResponseMessage response = await this.httpClient.PostAsJsonAsync($"/containers/{container.Id}/exec", new
-        {
-            AttachStdin = false,
-            AttachStdout = true,
-            AttachStderr = true,
-            Tty = false,
-            Cmd = new[] { "/bin/sh", "-c", command }
-        });
+        HttpResponseMessage response = await this.httpClient.PostAsJsonAsync(
+            $"/containers/{container.Id}/exec", 
+            new
+            {
+                AttachStdin = false,
+                AttachStdout = true,
+                AttachStderr = true,
+                Tty = false,
+                Cmd = new[] { "/bin/sh", "-c", command }
+            },
+            cancellationToken ?? CancellationToken.None);
         response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadFromJsonAsync<CreateExecInstanceResponse>();

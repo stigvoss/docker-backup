@@ -5,85 +5,46 @@ using NCrontab;
 
 namespace DockerBackup;
 
-public class BackupService : BackgroundService
+public class BackupService : CronScheduledBackgroundService
 {
     private readonly ILogger<BackupService> logger;
     private readonly DockerClient dockerClient;
-    private readonly BackupServiceOptions options;
     
     public BackupService(
         ILogger<BackupService> logger,
         DockerClient dockerClient,
-        IOptions<BackupServiceOptions> options)
+        IOptions<BackupServiceOptions> options) 
+        : base(options.Value.Cron, logger)
     {
         this.logger = logger;
         this.dockerClient = dockerClient;
-        this.options = options.Value;
     }
-    
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+
+    public override async Task ScheduledExecutionAsync(CancellationToken cancellationToken)
     {
-        logger.LogInformation("Backup scheduler service is starting.");
-        
-        try
+        await foreach (DockerContainer container in dockerClient.GetContainersAsync(cancellationToken)
+                           .WithCancellation(cancellationToken))
         {
-            CrontabSchedule schedule = CrontabSchedule.Parse(options.Cron);
-            
-            while (!stoppingToken.IsCancellationRequested)
+            if (container.IsBackupEnabled is not true || container.IsRunning is not true)
             {
-                DateTime utcNow = DateTime.UtcNow;
-                DateTime nextOccurrence = schedule.GetNextOccurrence(utcNow);
-                
-                this.logger.LogInformation("Next scheduled backup at: {NextOccurrence}", nextOccurrence);
-                await Task.Delay(nextOccurrence - utcNow, stoppingToken);
-                
-                this.logger.LogInformation("Running scheduled backup at: {Time}", DateTimeOffset.Now);
-                
-                await PerformBackupsAsync();
+                continue;
             }
-        }
-        catch (OperationCanceledException)
-        {
-            this.logger.LogInformation("Backup scheduler service is stopping.");
-        }
-        catch (Exception ex)
-        {
-            this.logger.LogError(ex, "An error occurred in the backup scheduler service.");
-            throw;
-        }
-    }
-    
-    private async Task PerformBackupsAsync()
-    {
-        try
-        {
-            await foreach (DockerContainer container in dockerClient.GetContainersAsync())
+                
+            try
             {
-                if (container.IsBackupEnabled is not true || container.IsRunning is not true)
-                {
-                    continue;
-                }
-                
-                try
-                {
-                    string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-                    string command = $"pg_dumpall --clean --if-exists --username postgres | gzip > /var/backups/backup-{timestamp}.sql.gz";
+                string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+                string command = $"pg_dumpall --clean --if-exists --username postgres | gzip > /var/backups/backup-{timestamp}.sql.gz";
                     
-                    logger.LogInformation("Backing up {ContainerId}", container.Id);
+                logger.LogInformation("Backing up {ContainerId}", container.Id);
                     
-                    string? result = await dockerClient.ExecuteCommandAsync(container, command);
+                await dockerClient.ExecuteCommandAsync(container, command);
                     
-                    logger.LogInformation("Backup completed for {ContainerId}", container.Id);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Failed to backup {ContainerId}", container.Id);
-                }
+                logger.LogInformation("Backup completed for {ContainerId}", container.Id);
             }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error during backup operation");
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to backup {ContainerId}", container.Id);
+            }
         }
     }
 }
