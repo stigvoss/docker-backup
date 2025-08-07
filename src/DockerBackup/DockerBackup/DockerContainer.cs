@@ -2,6 +2,7 @@ namespace DockerBackup;
 
 public record DockerContainer(
     string Id,
+    string Image,
     Dictionary<string, string> Labels,
     string State)
 {
