@@ -5,12 +5,6 @@ public record DockerContainer(
     Dictionary<string, string> Labels,
     string State)
 {
-    public bool? IsBackupEnabled 
-        => string.Equals(
-            Labels.GetValueOrDefault("dk.vsnt.backup.enabled"), 
-            "true", 
-            StringComparison.OrdinalIgnoreCase);
-
     public string? GetValueAsString(string key) => Labels.GetValueOrDefault(key);
     
     public int? GetValueAsInt(string key) => Labels.GetValueOrDefault(key) 
