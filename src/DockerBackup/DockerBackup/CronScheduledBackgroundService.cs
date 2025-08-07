@@ -26,11 +26,11 @@ public abstract class CronScheduledBackgroundService : BackgroundService
                 DateTime utcNow = DateTime.UtcNow;
                 DateTime nextOccurrence = schedule.GetNextOccurrence(utcNow);
                 
-                this.logger?.LogInformation("Next scheduled backup at: {NextOccurrence}", nextOccurrence);
+                this.logger?.LogInformation("Next scheduled execution at: {NextOccurrence}", nextOccurrence);
                 await Task.Delay(nextOccurrence - utcNow, cancellationToken)
                     .ConfigureAwait(false);
                 
-                this.logger?.LogInformation("Running scheduled backup at: {NextOccurrence}", nextOccurrence);
+                this.logger?.LogInformation("Running scheduled execution at: {NextOccurrence}", nextOccurrence);
                 
                 await ScheduledExecutionAsync(cancellationToken)
                     .ConfigureAwait(false);
